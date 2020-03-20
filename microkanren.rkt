@@ -73,7 +73,7 @@
 
 ;; infinite depth-first search
 
-(define (mplus $1 $2)
+#;(define (mplus $1 $2)
   (cond
     ((null? $1) $2)
     ((procedure? $1)(delay (mplus (force $1) $2)))
@@ -84,6 +84,14 @@
     ((null? $) mzero)
     ((procedure? $) (delay (bind (force $) g)))
     (else (mplus (g (car $)) (bind (cdr $) g)))))
+
+;; infinite interleaved search
+
+(define (mplus $1 $2)
+  (cond
+    ((null? $1) $2)
+    ((procedure? $1)(delay (mplus $2 (force $1))))
+    (else (cons (car $1) (mplus (cdr $1) $2)))))
 
 
 ; stream techniques highlight
@@ -123,7 +131,7 @@
 
 ; tests
 
-(let ((goal 
+#;(let ((goal 
        (call/fresh
         (lambda (x)
           (call/fresh
@@ -135,8 +143,15 @@
 
 
 (define (fives x) (disj (== x 'five)(inved (fives x))))
+(define (sixes x) (disj (== x 'six)(inved (sixes x))))
+(define (fives&sixes x) (disj (fives x) (sixes x)))
 
-((call/fresh fives) empty-state)
-(take-inf 1 ((call/fresh fives) empty-state))
-(take-inf 2 ((call/fresh fives) empty-state))
-(take-inf 10 ((call/fresh fives) empty-state))
+#;((call/fresh fives) empty-state)
+#;(take-inf 1 ((call/fresh fives) empty-state))
+#;(take-inf 2 ((call/fresh fives) empty-state))
+#;(take-inf 10 ((call/fresh fives) empty-state))
+
+((call/fresh fives&sixes) empty-state)
+(take-inf 1 ((call/fresh fives&sixes) empty-state))
+(take-inf 2 ((call/fresh fives&sixes) empty-state))
+(take-inf 10 ((call/fresh fives&sixes) empty-state))
