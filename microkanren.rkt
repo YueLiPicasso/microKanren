@@ -90,8 +90,8 @@
 (define (mplus $1 $2)
   (cond
     ((null? $1) $2)
-    ((procedure? $1)(delay (mplus $2 (force $1))))
-    (else (cons (car $1) (mplus (cdr $1) $2)))))
+    ((procedure? $1)(delay (mplus $2 (force $1)))) ; swap here
+    (else (cons (car $1) (mplus $2 (cdr $1))))))   ; swap here
 
 
 ; stream techniques highlight
@@ -100,9 +100,9 @@
   (syntax-rules ()
     ((delay e) (lambda () e))))
 
-(define-syntax inved ; the inverse-eta-delay goal constructor
+(define-syntax snooze ; the inverse-eta-delay goal constructor
   (syntax-rules ()
-    ((inved g)(lambda (s/c) (delay (g s/c))))))
+    ((snooze g)(lambda (s/c) (delay (g s/c))))))
 
 (define-syntax force ; execute a delayed procedure
   (syntax-rules ()
@@ -114,7 +114,7 @@
 ; effect since Scheme is call-by-value
 #;(define (force g) (g)) 
 #;(define (delay e) (lambda () e))
-#;(define (inved g) (lambda (s/c) (delay (g s/c))))
+#;(define (snooze g) (lambda (s/c) (delay (g s/c))))
 
 
 
@@ -142,8 +142,8 @@
   (goal '(() . 0)))
 
 
-(define (fives x) (disj (== x 'five)(inved (fives x))))
-(define (sixes x) (disj (== x 'six)(inved (sixes x))))
+(define (fives x) (disj (== x 'five)(snooze (fives x))))
+(define (sixes x) (disj (== x 'six)(snooze (sixes x))))
 (define (fives&sixes x) (disj (fives x) (sixes x)))
 
 #;((call/fresh fives) empty-state)
