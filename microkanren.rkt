@@ -74,10 +74,10 @@
 ;; infinite depth-first search
 
 #;(define (mplus $1 $2)
-  (cond
-    ((null? $1) $2)
-    ((procedure? $1)(delay (mplus (force $1) $2)))
-    (else (cons (car $1) (mplus (cdr $1) $2)))))
+    (cond
+      ((null? $1) $2)
+      ((procedure? $1)(delay (mplus (force $1) $2)))
+      (else (cons (car $1) (mplus (cdr $1) $2)))))
 
 (define (bind $ g)
   (cond
@@ -123,23 +123,32 @@
 (define empty-state '(() . 0))
 
 (define (take-inf n s-inf)
+  (cond
+    ((zero? n) '())
+    ((null? s-inf) '())
+    ((pair? s-inf)(cons (car s-inf) (take-inf (- n 1) (cdr s-inf))))
+    ((procedure? s-inf)(take-inf n (force s-inf)))))
+
+(define (walk* v s)
+  (let ((v (walk v s)))
     (cond
-      ((zero? n) '())
-      ((null? s-inf) '())
-      ((pair? s-inf)(cons (car s-inf) (take-inf (- n 1) (cdr s-inf))))
-      ((procedure? s-inf)(take-inf n (force s-inf)))))
+      ((var? v) v)
+      ((pair? v)
+       (cons (walk* (car v) s)
+             (walk* (cdr v) s)))
+      (else v))))
 
 ; tests
 
 #;(let ((goal 
-       (call/fresh
-        (lambda (x)
-          (call/fresh
-           (lambda (y)
-             (call/fresh
-              (lambda (z)
-                (== `(,x atom (,z)) `(air ,y (plane)))))))))))
-  (goal '(() . 0)))
+         (call/fresh
+          (lambda (x)
+            (call/fresh
+             (lambda (y)
+               (call/fresh
+                (lambda (z)
+                  (== `(,x atom (,z)) `(air ,y (plane)))))))))))
+    (goal '(() . 0)))
 
 
 (define (fives x) (disj (== x 'five)(snooze (fives x))))
@@ -151,7 +160,82 @@
 #;(take-inf 2 ((call/fresh fives) empty-state))
 #;(take-inf 10 ((call/fresh fives) empty-state))
 
-((call/fresh fives&sixes) empty-state)
-(take-inf 1 ((call/fresh fives&sixes) empty-state))
-(take-inf 2 ((call/fresh fives&sixes) empty-state))
-(take-inf 10 ((call/fresh fives&sixes) empty-state))
+#;((call/fresh fives&sixes) empty-state)
+#;(take-inf 1 ((call/fresh fives&sixes) empty-state))
+#;(take-inf 2 ((call/fresh fives&sixes) empty-state))
+#;(take-inf 10 ((call/fresh fives&sixes) empty-state))
+
+(define (append a b ab)
+  (disj (conj (== a '())(== b ab))
+        (call/fresh
+         (lambda (h)
+           (call/fresh
+            (lambda (t)
+              (call/fresh
+               (lambda (tb)
+                 (conj (== a `(,h . ,t))
+                       (conj (== ab `(,h . ,tb))
+                             (append t b tb)))))))))))
+                  
+#;(take-inf 10 ((call/fresh (lambda (q) (append '(1) '(2) '(1 2)))) empty-state))
+
+#;(map (lambda(s/c)(walk* (var 0) (car s/c))) 
+(take-inf 10 ((call/fresh (lambda (q) (append '(1) '(2) '(1 2)))) empty-state)))
+
+
+#;(take-inf 10 ((call/fresh
+                 (lambda(x)
+                   (call/fresh
+                    (lambda(y)
+                      (append x y '(1 2)))))) empty-state))
+
+
+#;(take-inf 10 ((call/fresh
+                 (lambda(q)
+                   (call/fresh
+                    (lambda(x)
+                      (call/fresh
+                       (lambda(y)
+                         (conj (== q `(,x ,y))
+                               (append x y '(1 2))))))))) empty-state))
+
+#;(map
+ (lambda(s/c)(walk* (var 0) (car s/c))) ; walk the first variable 
+ (take-inf 10 ((call/fresh
+                (lambda(q)
+                  (call/fresh
+                   (lambda(x)
+                     (call/fresh
+                      (lambda(y)
+                        (conj (== q `(,x ,y))
+                              (append x y '(1 2))))))))) empty-state)))
+
+
+
+; macros
+
+(define-syntax fresh
+  (syntax-rules ()
+    ((_ () g) g)
+    ((_ (x0 x ...) g)(call/fresh (lambda(x0)(fresh (x ...) g))))))
+
+
+
+(define-syntax run
+  (syntax-rules ()
+      ((_ n (q) g)
+       (map (lambda(s/c)(walk* (var 0) (car s/c)))
+            (take-inf n ((fresh (q) g) empty-state))))))
+
+
+; test the macros
+
+(take-inf 10 ((fresh (x y) (append x y '(1 2))) empty-state)) 
+
+(take-inf 10 ((fresh (q x y) (conj (== q `(,x ,y))
+                                   (append x y '(1 2)))) empty-state))
+
+(run 10 (q) (fresh (x y) (conj (== q `(,x ,y))
+                               (append x y '(1 2)))))
+
+
