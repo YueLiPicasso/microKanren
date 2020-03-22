@@ -7,7 +7,7 @@ The source code contains, among others, microKanren that consists of logic varia
 
 There are two ways to understand the (operational) semantic of microKanren: 
 
-- __macroscopic semantic:__ we add the macros (`fresh`,`run`,`conde`,etc) and program using these macros (so we are programming in miniKanren). We understand the programs according to the semantic of logic programming (SLD-resolution). 
+- __macroscopic semantic:__ We add the macros (`fresh`,`run`,`conde`,etc) and program using these macros (so we are programming in miniKanren). We understand the programs according to the semantic of logic programming (SLD-resolution). 
 
 - __microscopic semantic:__ We refrain from using the macros (`fresh`,`run`,`conde`,etc) when defining and querying about goals, and we see microKanren programs as Scheme programs, and apply the semantic of Scheme.
 
